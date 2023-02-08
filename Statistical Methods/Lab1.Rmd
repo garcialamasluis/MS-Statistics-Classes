@@ -1,0 +1,259 @@
+---
+title: 'ST 552: Lab 1'
+date: "January 11, 2023"
+output:
+  html_document:
+    df_print: paged
+---
+
+**Notes about this file format:**
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) file. When you execute code within the file, the results will appear beneath the code. 
+
+As currently set up in the preamble at the top of the document, when you knit the document, an HTML file containing the code and output will be saved alongside it (click the *Knit* button to preview the HTML file). The preview shows you a rendered HTML copy of the contents of the editor. 
+
+You may prefer to work in an R Markdown Notebook format -- I have used that format in previous years, but some students had issues with the computers in the computer lab so I have changed the format. If you're curious about Notebooks, ask me and I'd be happy to discuss. Essentially, unlike *Knit*, clicking *Preview* in a Notebook file does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+## Outline
+
+- RStudio and Projects
+- Getting set up for reproducible code
+- Reproducible reports: Rmarkdown
+- Simple linear regression
+
+## Getting set up in RStudio
+
+We will use RStudio as our interface to R in this class. I will assume some familiarity with RStudio, but am more than happy to answer questions about it in office hours. It has lots of neat features, which I am still learning too!
+
+**Projects** are a useful way to organize your work in RStudio. When you open a project:
+
+- R will open with the working directory set to the project directory (this is helpful for reading in data from a file without having to specify the file path)
+- Code files you had open last time you were working on the project will still be open
+- The History contains only code you have run in this project
+
+To create a new project for this class:
+
+- In RStudio, go to File -> New Project
+- Select 'New Directory'
+- Select 'New Project' and name it 'ST552'. You can choose where on your computer to save the directory. If you want it available from OSU computers, you can put it in your ONID homedrive (see https://oregonstate.teamdynamix.com/TDClient/1935/Portal/KB/ArticleDet?ID=45671&SIDs=7377 for more info).
+
+You only need to create the project once. The next time you are going to work on ST 552, open the project in RStudio (File -> Open Project).
+
+## Reproducible code
+
+Reproducibility is one of the huge advantages of using a programming language for data analysis. Code can be used not only to clean and analyze data, but also to translate numbers and figures into a statistical report. This analysis can be repeated in the future to get the same result, and your results can be verified by others.
+
+By default, R (and RStudio) save a copy of your workspace (packages you have loaded and objects you have created) when you exit R, and it loads it again when you come back. This is convenient, but it actually makes it easy to create work that is *not* reproducible. For example, if you accidentally rely on objects you created outside of your script, someone else who tries to run the script will not be able to get the same result.
+
+We will change the default settings in the ST552 project to encourage writing reproducible code: Go to Tools -> Project Options. In the General tab, set the following:
+
+- Restore .RData into workspace at startup = No
+- Save workspace to .RData on exit = No
+- Always save history = Yes
+
+Now when we start a fresh R session (Session -> Restart R) we know there is nothing from a previous session hanging around. There are other ways to accomplish this, but this approach is encouraged.
+
+These changes will apply just to your ST552 project, not all workspaces in RStudio. It is encouraged to use these options for all your work, but everyone has their own workflow preferences. You can set them globally in Tools -> Global Options. Find an approach that works well for you - the main goal here is to introduce some workflows you may be unfamiliar with.
+
+When I am writing R code, I will occasionally check for reproducibility by restarting R and sourcing my code (Code -> Source File, or Source button in Editor). Sourcing a file runs all the code in the file from top to bottom, but it will stop if an error occurs. If an error does occur, fix the error, restart R, and try sourcing again. At the very least, do this before closing R and before handing in code. **Your first homework requires submitting an R code file that will be checked for reproducibility.**
+
+Reproducible code is the first step towards writing reproducible reports.
+
+## Reproducible reports: Rmarkdown
+
+A reproducible report is a document that records a complete analysis so that it can be reproduced exactly (and automatically) at any point in the future.
+
+For homeworks, we will be able to record everything we need in a single document. For more complicated projects you might undertake (e.g. perhaps your MS thesis), a reproducible analysis will probably be a directory of data, reproducible code files, and report generating files. This would ideally be under version control using something like GitHub.
+
+We will use Rmarkdown to generate our reports. Rmarkdown files combine markdown (a type of plain text markup language) with chunks of R code. When compiled, the R code in the file is evaluated and the results (e.g. calculations, plots, tables) are woven into the markdown document. Markdown is flexible enough that it can then be turned into a pdf (via LaTeX), a Word document, or an html file. Every file I show in this class (e.g. lecture slides, labs, etc.) has been created in Rmarkdown.
+
+*If you've used RMarkdown before, feel free to skip to the next section.*
+
+Give this a try in today's Lab:
+
+- Open a new Rmarkdown file in RStudio (New File -> R Markdown)
+- In the dialog that opens, put in your own title and select Word document.
+
+The file that opens has a template to help you figure out how Rmarkdown works. A few different types of formatting are shown. In particular, observe the way a code chunk for R code is displayed, with 3 backticks and then r in curly braces to begin the chunk, and 3 backticks to end the chunk. Hit the 'Knit' button and watch what happens. Compare the Word document that opens to the contents of the .Rmd file. In particular, notice the R code chunks in the .Rmd file are run, "echoed" and then results (output or plots) are included in the document.
+
+Another recommended output is knitting to pdf, but you will need to have LaTeX installed on the computer you use. Getting the workflow set up that you plan to use for the course will be helpful, so it's good to invest the time now to get all the tools you want to use set up. I'm happy to help out in office hours.
+
+## Simple linear regression
+
+*Note*: These examples use material from both today (Wednesday) and Friday's lectures.
+
+### Example 1: Galton height data from lecture
+
+This example is from the `Sleuth3` package (data that accompanies *The Statistical Sleuth* by Ramsey and Schafer), which you may need to install using `install.packages("Sleuth3")` if you do not already have it.
+
+#### 1. First, let's load the data. 
+
+This will also give us some practice working with R Markdown files. When you execute the code chunk (by clicking the green arrow that looks like the "play" button in the upper right orner of the code chunk), you will see the output appear below it. The `head()` function shows the first 6 lines of data. The first chunk of code below that will convert female height to "male-equivalent" by multiplying by 1.08 and calculate parent height as the average of mother and father height.
+
+```{r}
+library(ggplot2)
+library(Sleuth3)
+data(ex0726, package="Sleuth3")
+head(ex0726)
+
+ex0726$cHeight <- ifelse(ex0726$Gender == "male", ex0726$Height, 1.08*ex0726$Height)
+ex0726$pHeight <- (ex0726$Father + 1.08*ex0726$Mother)/2
+```
+
+#### 2. Next, plot the data with the regression line overlaid. 
+
+If you are not familiar with ggplot, the basic syntax is `ggplot(data name, aes(y=name of y variable, x=name of x variable))`. This defines which columns of data we are grabbing. `aes` is short for 'aesthetic' and will help us define how the plot will look. Next we say we want to add points to the plot with `geom_point()` and that we want to add the regression line with `geom_smooth()`. By default, a different type of line will be added, so `method='lm'` allows us to say we want the regression line in particular. Notice that the "confidence band" about the regression line is also shown. For each vertical slice, this is the confidence interval for $\hat{\mu}(Y|X)$. Finally, we can change the axis labels with `labs()`.
+
+```{r}
+ggplot(ex0726, aes(y=cHeight, x=pHeight)) + 
+  geom_point() +
+  geom_smooth(method="lm") +
+  labs(x="Parent Height", y="Child Height")
+```
+
+At this point (or, really, using just a scatterplot of the data without the regression line) it's a good idea to confirm that the assumptions for regression are met. This is a foundational example, so all the assumptions look good, but think about how you would check them.
+
+- **Linearity** looks good because we can draw a straight line (not curved or some other shape) through the data.
+- **Independence** is hard to assess visually, but we would try to think about how the data were collected. For example, if there are twins or siblings in our data, the independence assumption may be slightly violated.
+- **Constant variance** looks good because in each vertical strip the points look to have roughly the same variance.
+- **Normality** looks good (again, look within vertical strips), and even if it's not perfect we have a good sample size here.
+
+> What might the scatterplot look like if one or more of these assumptions were violated?
+
+#### 3. Now let's fit the model using the `lm()` function and look at the output. 
+
+The format is `lm(y ~ x, data)`. Our response of interest is child's height, and we want to predict that using parent's height.
+
+```{r}
+mod <- lm(cHeight ~ pHeight, data=ex0726)
+summary(mod)
+```
+
+Let's compare with our mathematical model, which was $$\mu(Y|X)=\beta_0+\beta_1X$$ or, equivalently, $$Y_i=\beta_0+\beta_1X_i+\varepsilon_i$$ What are our parameter estimates?
+
+- $\hat{\beta}_0=19.82606$. This is our estimate for the intercept, or the mean value of $Y$ when $X=0$. The intercept doesn't have a good practical interpretation in this example (what is mean child height when parents are 0 inches tall?), but we still include it in our model to fit the line.
+- $\hat{\beta}_1=0.71392$. This is our estimate for the intercept, or the change in mean $Y$ when $X$ is increased by 1 unit. In other words, a 1 inch increase in parent height is associated with a 0.71392 inch increase in child height. Because this is positive, children with taller parents also tend to be taller, which makes sense!
+
+#### 4. How would you get these estimates "by hand"? 
+
+Use the least squares formulas! Evaluate the following code chunk and compare the results with the `lm()` output in part 3.
+
+```{r}
+x <- ex0726$pHeight
+y <- ex0726$cHeight
+(b1hat <- sum((x-mean(x))*(y-mean(y))) / sum((x-mean(x))^2)) #putting parentheses around the line will also print the result
+(b0hat <- mean(y)-b1hat*mean(x))
+```
+
+#### 5. The residual standard error is $\hat{\sigma}$, our estimate of sigma. 
+
+It is equal to the square root of: the sum of squared residuals divided by the degrees of freedom, or $\hat{\sigma}=\sqrt{\text{sum of squared residuals}/df}$. The degrees of freedom is the number of observations ($n$) minus the number of parameters we needed to estimate, which in this case is 2 ($\beta_0$ and $\beta_1$).
+
+How would you calculate the residual standard error "by hand"? We can extract the a vector with the residuals from the model using `mod$residuals`.
+
+```{r}
+n <- nrow(ex0726)
+(rse <- sqrt(sum(mod$residuals^2)/(n-2)))
+```
+
+Find this number in the model summary above.
+
+(If you want to go even further, think about how you would calculate the residuals yourself using just `x`, `y`, `b1hat` and `b0hat`.)
+
+#### 6. How would you get the standard errors of the estimates "by hand"?
+
+(Refer to the formulas from lecture.)
+
+```{r}
+(se.b0hat <- rse * sqrt(1/n + mean(x)^2/((n-1)*var(x))))
+(se.b1hat <- rse * sqrt(1/((n-1)*var(x))))
+```
+
+#### 7. We have now reproduced the estimates and standard errors for $\beta_0$ and $\beta_1$ in the model output. How about the test statistics and $p$-values?
+
+To test $H_0: \beta_0=0$, the $t$-statistic is
+
+```{r}
+(t.b0 <- (b0hat - 0)/se.b0hat)
+```
+
+We compare this to a $t$ distribution with $n-2$ degrees of freedom (again, number of observations minus number of parameters fit in the model).
+
+```{r}
+2*(1-(pt(t.b0, df=n-2)))
+```
+
+We get the same $p$-value as the model summary. Find the number in the printout above to confirm. How to interpret this? The $p$-value is very small, and much smaller than $0.05$, so we would reject the null hypothesis that $\beta_0=0$ and conclude that there is evidence that the intercept is different than 0. This should not be surprising given the initial plot of the data.
+
+Now let's do the same for $\beta_1$. To test $H_0: \beta_1=0$, the $t$-statistic and $p$-value are:
+
+```{r}
+(t.b1 <- (b1hat - 0)/se.b1hat)
+2*(1-(pt(t.b1, df=n-2)))
+```
+
+Again, we should get the same numbers as the printout above. Scroll up to confirm. What is our conclusion? The $p$-value is again very small (so small that R just prints `0`), so we would reject the null hypothesis that $\beta_1=0$ and conclude that there does appear to be a linear trend in the mean of child height as a function of parent height. In other words, there does appear to be a linear association between $X$ and $Y$.
+
+### Example 2: Mammals
+
+Next, we will work with a dataset from the `MASS` package. You may need to install it using `install.packages("MASS")`. The dataset `mammals` contains average brain and body weights for 62 species of land mammals. For this lab, we will try to find a relationship between body and brain weight of land mammals.
+
+This problem is less guided, and will give you some practice answering questions with regression models.
+
+```{r}
+library(MASS)
+library(ggplot2)
+
+ggplot(data=mammals, aes(x=body, y=brain)) +
+  geom_point()
+```
+
+#### 1. What does the dataset look like? Are there some outlier points? Can we identify them?
+
+There are a few different ways to subset in R, including "base R" commands and "tidyverse" commands. I show both here -- find an approach that works for you. Notice that when we execute the code chunk there are three identical outputs shown, from the three commands.
+
+```{r}
+# Base R
+mammals[mammals$brain>1000, ]
+
+# Tidyverse, two approaches
+library(dplyr)
+filter(mammals, brain>1000)
+mammals %>% filter(brain>1000)
+```
+
+#### 2. Let's fit a straight line to the data. Plot the fitted line to the data.
+
+```{r}
+ggplot(data=mammals, aes(x=body, y=brain)) +
+  geom_point() +
+  geom_smooth(method="lm")
+```
+
+
+#### 3. What can you say about the fitted line? Does it seem to fit the data well?
+
+#### 4. What is the estimated equation of the fitted line?
+
+```{r}
+mod <- lm(brain ~ body, data=mammals)
+summary(mod)
+```
+
+The value of the estimated slope coefficient seems to be quite close to 1.
+
+#### 5. Test the hypothesis that the slope coefficient is equal to 1.
+
+Note that this will be *different* than the $p$-value shown in the R output.
+
+```{r}
+tstat <- (mod$coef[2] - 1)/(summary(mod)$coefficients[2, 2])
+qt(0.975, df=nrow(mammals)-2)
+pt(tstat, df=nrow(mammals)-2)
+```
+
+Notice that `mod$coef[2]` extracts $\beta_1=0.96650$ and `summary(mod)$coefficients[2, 2]` extracts the corresponding standard error, $0.04766$. (To make this document fully reproducible, I should have extracted those numbers from the code rather than typing them, but I typed them here so you can see them when following along in the R Markdown file.)
+
+#### 6. What conclusion can you draw?
+
+#### 7. Why is this $p$-value different than the $p$-value in the R output from the model summary?

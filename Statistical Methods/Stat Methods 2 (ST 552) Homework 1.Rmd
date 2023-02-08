@@ -1,0 +1,146 @@
+---
+title: "Statistical Methods 2 Homework 1"
+output:
+  pdf_document: default
+  html_document: default
+date: "2023-01-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loadings possible useful libraries
+```{r}
+library(ggplot2)
+library(Sleuth3)
+library(MASS)
+```
+# Problem 1)
+
+### a)
+
+```{r}
+#voting for favorite dog
+name_of_voter <- c("Luis", "Fob", "Bob", "Rob", "Lob") #unique voters voting
+fav_dog_data <- c("Apollo", "Penny", "Penny", "Penny", "Penny") #voters favorite dog
+weight_in_kg <- c(1,10,20,30,40) #weight in kg of voter
+
+df <- data.frame(name_of_voter,fav_dog_data,weight_in_kg)
+
+print(df)
+```
+
+### b)
+
+```{r}
+plot(x = factor(df$fav_dog_data), main = "Vote count for voters favorite dog")
+```
+
+### c)
+
+```{r}
+mammals <- mammals
+fit <- lm(brain ~ body, data=mammals)
+summary(fit)
+```
+
+### d)
+
+```{r}
+B_0 <- fit$coefficients[1]
+```
+
+### e)
+
+```{r}
+se <- sigma(fit)
+```
+
+### f)
+
+```{r}
+log_body <- log(mammals$body)
+log_brain <- log(mammals$brain)
+
+mammals$log_body <- log_body
+mammals$log_brain <- log_brain
+
+mammals
+```
+
+### g)
+
+```{r}
+fit <- lm(log_brain ~ log_body, data=mammals)
+summary(fit)
+```
+\newpage
+
+# Problem 2)
+
+```{r}
+cats <- cats
+```
+
+### a)
+
+The explanatory variable here would be the body weight (Bwt). The response variable would be hearth weight (Hwt). This is because we are trying to investigate if body weight is a good variable to predict heart weight in cats. 
+
+### b)
+
+```{r}
+plot(cats$Bwt,cats$Hwt)
+```
+
+There appears to be a somewhat positive linear relationship between cats body weight and heart weight. There appears to be less variance the lower the weight of the cat, and higher variance as the body weight increases. However, this effect doesn't seem too large.
+
+### c)
+
+Yes, I think using a linear regression model would be appropriate as it has a fairly positive linear relationship and the variance is fairly consistent (and possibly normal) for the distribution around heart weight. There is also a reasonably large sample size. It also likely reasonably fair to assume independence between observations in this study. 
+
+### d)
+
+```{r}
+fit <- lm(Hwt ~ Bwt, data = cats)
+summary(fit)
+```
+
+```{r}
+plot(cats$Bwt,cats$Hwt)
+abline(fit)
+```
+
+The intercept parameter was estimated to be $\hat{\beta_1} = -0.3567$ and $\hat{\beta_0} = 4.0341$.
+
+### e)
+
+In cats, for every 1 unit increase in body weight (Bwt) in kg it is associated with mean heart weight increases (Hwt) by 4.0341 grams. With a base case of 0 kg body weight for a cat, the heart weight would be -.3567 grams, which doesn't make sense to have a negative weight however this is okay as it also doesn't make sense to have a 0 weight. 
+
+### f)
+
+```{r}
+B_1_hypothesis <- 3.75 
+B_1_estimated <- fit$coefficients[2]
+difference <- B_1_estimated - B_1_hypothesis
+se <- summary(fit)$coefficients[2, 2]
+
+t_stat <- difference/se
+t_stat
+
+p_value <- 2*(1-pt(t_stat, fit$df.residual))
+p_value
+```
+
+$$H_0: \beta_1 = 4$$
+Here, the test statistic = 1.135 and the p-value = .258. We would fail to reject the null hypothesis with an alpha level .05 that $B_1$ is equal to 4. To determine a linear relationship between the explanatory variable and the response variable, it is not very useful because any non zero number can be considered a non linear relationship. 
+
+### g)
+
+```{r}
+intercept <- fit$coefficients[1]
+predicted <- intercept + B_1_estimated*2.25
+predicted
+```
+
+Based on the fitted regression model in part (d), we would predict a mean heart weight of 8.72 grams for a cat with a body weight of 2.25 kg. 

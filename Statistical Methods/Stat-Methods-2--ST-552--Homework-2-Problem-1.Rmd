@@ -1,0 +1,56 @@
+---
+title: "Statisticial Methods HW 2"
+output: pdf_document
+date: "2023-01-22"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Problem 1)
+
+### a) 
+
+We know that the $n$ observations and the model for linear regression can be written as:
+$$Y_1 = \beta_0 + \beta_1 X_1 + \varepsilon_1$$
+$$\vdots = \vdots $$
+$$ Y_n = \beta_0 + \beta_n X_n + \varepsilon_n $$
+
+Which can be written in matrix form:
+
+$$\begin{pmatrix} Y_1 \\ \vdots \\ Y_n \end{pmatrix} = \begin{pmatrix} 1 & X_1 \\ \vdots & \vdots \\ 1 & X_n \end{pmatrix} \begin{pmatrix} \beta_0 \\  \beta_1 \end{pmatrix} + \begin{pmatrix} \varepsilon_1 \\ \vdots \\ \varepsilon_n \end{pmatrix}$$
+
+Which can be simplified further:
+
+$$ \boldsymbol{Y}_{n \times 1} = \boldsymbol{X}_{n \times 2} \cdot \beta_{2 \times 1} + \varepsilon_{n \times 1}$$
+$$ \boldsymbol{Y} = \boldsymbol{X}\boldsymbol{\beta} + \varepsilon$$
+
+### b) 
+
+We have already determined: $\boldsymbol{X} = \begin{pmatrix} 1 & X_1 \\ \vdots & \vdots \\ 1 & X_n \end{pmatrix}$. The transpose would be: $\boldsymbol{X}^T = \begin{pmatrix} 1 & \cdots & 1 \\ X_1 & \cdots & X_n \end{pmatrix}$. So,
+
+$$ X^T X = \begin{pmatrix} 1 & \cdots & 1 \\ X_1 & \cdots & X_n \end{pmatrix}  \begin{pmatrix} 1 & X_1 \\ \vdots & \vdots \\ 1 & X_n \end{pmatrix}  = \begin{pmatrix} n & X_1 + \cdots + X_n \\ X_1 + \cdots + X_n & X_1^2 + \cdots + X_n^2 \end{pmatrix}$$
+$$ X^T X = \begin{pmatrix} n & \sum_{i = 0}^n X_i \\ \sum_{i = 0}^n X_i & \sum_{i = 0}^n X_i^2 \end{pmatrix}$$
+
+Now for $X^TY$:
+
+$$X^TY =  \begin{pmatrix} 1 & \cdots & 1 \\ X_1 & \cdots & X_n \end{pmatrix}\begin{pmatrix} Y_1 \\ \vdots \\ Y_n \end{pmatrix} = \begin{pmatrix} Y_1 + \cdots + Y_n \\ X_1Y_1 + \cdots X_nY_n \end{pmatrix}$$
+$$X^TY = \begin{pmatrix} \sum_{i = 0}^n Y_i \\ \sum_{i = 0}^n X_iY_i \end{pmatrix}$$
+
+Finally, $(X^TX)^{-1}$ is the inverse of $X^TX$, which we found earlier. We can use that when $A = \begin{pmatrix} a & b \\ c & d \end{pmatrix}$ then the inverse is $A^{-1} = \frac{1}{ad-bc} \begin{pmatrix} d & -b \\ -c & a\end{pmatrix}$.
+So if $A = X^TX$ then $A^{-1} = (X^TX)^{-1}$. Finally,
+
+$$(X^TX)^{-1} = \frac{1}{n(\sum_{i = 0}^n X_i^2) - (\sum_{i = 0}^n X_i)(\sum_{i = 0}^n X_i)} \begin{pmatrix} \sum_{i = 0}^n X_i^2 & -\sum_{i = 0}^n X_i \\ -\sum_{i = 0}^n X_i & n \end{pmatrix}$$
+
+We know that $\bar{X}$
+
+### c)
+
+To compute $ \boldsymbol{\hat{\beta}}$:
+
+$$\boldsymbol{\hat{\beta}} = (X^TX)^{-1}X^TY =  \frac{1}{n(\sum_{i = 0}^n X_i^2) - (\sum_{i = 0}^n X_i)(\sum_{i = 0}^n X_i)} \begin{pmatrix} \sum_{i = 0}^n X_i^2 & -\sum_{i = 0}^n X_i \\ -\sum_{i = 0}^n X_i & n \end{pmatrix} \begin{pmatrix} \sum_{i = 0}^n Y_i \\ \sum_{i = 0}^n X_iY_i \end{pmatrix}$$
+
+This is a bit large, but the matrix multiplication can be simplified to:
+
+$$\boldsymbol{\hat{\beta}} = 

@@ -1,0 +1,187 @@
+---
+title: "ST 552: Lab 4"
+date: "February 1, 2023"
+output: html_document
+---
+
+## Outline
+
+- Cheddar cheese example
+- Variance covariance matrix
+- Other model syntax
+- Introduction to linear hypothesis testing
+
+##
+
+In a study of cheddar cheese from the LaTrobe Valley of Victoria, Australia, samples of cheese were analyzed for their chemical composition and were subjected to taste tests. Overall scores were obtained by combining the scores from several tasters.
+
+These data can be found in the `cheddar` dataset in the `faraway` package:
+
+```{r}
+library(faraway)
+data(cheddar)
+head(cheddar)
+```
+
+`cheddar` is a data frame with 30 observations on the following 4 variables:
+
+- `taste`: subjective taste score
+- `Acetic`: concentration of acetic acid (log scale)
+- `H2S`: concentration of hydrogen sulfide (log scale)
+- `Lactic`: concentration of lactic acid
+
+First, we will fit the following model, which we will refer to as the **Full Model**:
+
+$$\text{taste}_i = \beta_0 + \beta_1\text{Acetic}_i + \beta_2\text{H2S}_i+\beta_3\text{Lactic}_i+\varepsilon_i$$
+
+Let's fit it in R and look at the model summary.
+
+```{r}
+full <- lm(taste ~ ., data=cheddar)
+summary(full)
+```
+
+Note that the syntax `lm(y ~ .)` means fit a linear model with `y` as the response and all other variables in the data frame used as explanatory variables, with no interactions. This is shorthand notation in R. It is equivalent to `lm(taste ~ Acetic + H2S + Lactic, data=cheddar)`. You can try that model too, to verify that the estimates are the same.
+
+## Part 1: Variance covariance matrix
+
+#### 1. What is the vector of estimated regression coefficients, $\hat{\mathbf{\beta}}$?
+
+*Answer*: $\hat{\mathbf{\beta}}$ is a $4 \times 1$ vector composed of $\hat{\beta}_0$, $\hat{\beta}_1$, $\hat{\beta}_2$, and $\hat{\beta}_3$. Find those values in the `lm()` output above. The specific values are:
+
+```{r}
+full$coefficients
+```
+
+#### 2. Write down the design matrix $\mathbf{X}$ and the response vector $\mathbf{Y}$ and use them to calculate $\mathbf{\hat{\beta}}$ using the formula for the least squares estimates. 
+
+(It's okay to extract $\mathbf{X}$ from your fitted model, rather than creating it yourself like you did in the last lab.) Confirm these are the same values as above.
+
+*Answer*:
+
+```{r}
+X <- model.matrix(full)
+Y <- cheddar$taste
+solve(t(X) %*% X) %*% t(X) %*% Y
+```
+
+#### 3. What are the values of $\hat{\sigma}$, n, $\hat{\sigma}^2$, $\sum_{i=1}^ne_i^2$, and $\sigma$?
+
+*Answer*: We can find these all of these things in R except for $\sigma$, which is the true population standard deviation and cannot be found from the data. In order, the values are
+
+```{r}
+summary(full)$sigma
+nrow(cheddar)
+summary(full)$sigma^2
+sum(full$residuals^2)
+```
+
+It might be of interest to see how these different values are related. The residual degree of freedom is equal to the number of observations ($n$) minus the number of parameters in the model (4, the length of the $\mathbf{\beta}$ vector). This is 30-4=26. Then $\frac{1}{n-(p+1)}\sum_{i=1}^ne_i^2=\hat{\sigma}^2$. (As an aside, note that $p$ in the denominator of the last equation is the number of predictors (explanatory variables) in the model, not the number of parameters. The number of parameters is $p+1$ since we need to add the intercept.) The following are equivalent:
+
+```{r}
+summary(full)$sigma^2
+sum(full$residuals^2)/full$df.residual  #note that full$df.residual = 26
+```
+
+#### 4. Find the variance covariance matrix.
+
+The variance of $\mathbf{\hat{\beta}}$ is $\sigma^2(\mathbf{X}^T\mathbf{X})^{-1}$, however we do not know $\sigma^2$. Plug in the estimate $\hat{\sigma}^2$ from part 3. and use matrix algebra to find $Var(\mathbf{\hat{\beta}})$. This is called the *variance covariance matrix*.
+
+```{r}
+summary(full)$sigma^2 * solve(t(X) %*% X)
+```
+
+We can also extract it directly from the `lm()` object:
+
+```{r}
+vcov(full)
+```
+
+Note that the diagonal contains only positive values, since these are variances. However, the other entries of the matrix can be negative, since covariances can be negative.
+
+#### 5. Use the output from part 4 to verify $SE(\hat{\beta}_1)$ from the coefficients table in the `lm()` output.
+
+*Answer*: This is the square root of the (2,2) entry of the variance covariance matrix, $\sqrt{19.889429}=4.459757$.
+
+```{r}
+summary(full)$coefficients[2,2]
+sqrt(vcov(full)[2,2])
+```
+
+#### 6. What is the value of $\widehat{Cov}(\hat{\beta}_1, \hat{\beta}_2)$?
+
+*Answer*:
+
+```{r}
+vcov(full)[2,3]
+```
+
+## Part 2: Other Models and Introduction to Linear Hypothesis Testing
+
+*Katie's note: We haven't quite gotten to this part in lecture yet. We will come back to this in the next lab once we have covered more on linear hypothesis testing. For now, fit the five alternative models given below and follow the instructions. More about the 'why' later.*
+
+We will continue working with the `cheddar` data. The model from Part 1 will continue to be referred to as the **Full Model**. In addition, consider the following alternative models (note: it may be helpful to view the compiled version of this document):
+
+- **Model 1**: $\text{taste}_i=\beta_0+\varepsilon_i$
+- **Model 2**: $\text{taste}_i=\beta_0+\beta_1\text{Acetic}_i+\varepsilon_i$
+- **Model 3**: $\text{taste}_i=\beta_1\text{H2S}_i+\beta_2\text{Lactic}_i+\varepsilon_i$
+- **Model 4**: $\text{taste}_i=\beta_0+\beta_1\text{H2S}_i+\beta_2\text{Lactic}_i+\varepsilon_i$
+- **Model 5**: $\text{taste}_i=\beta_0+\beta_1(\text{Acetic}_i+\text{H2S}_i)+\beta_2\text{Lactic}_i+\varepsilon_i$
+
+#### 1. Fit these five models, and name them each something different.
+
+```{r}
+mod1 <- lm(taste ~ 1, data=cheddar)
+mod2 <- lm(taste ~ Acetic, data=cheddar)
+mod3 <- lm(taste ~ -1 + H2S + Lactic, data=cheddar)
+mod4 <- lm(taste ~ H2S + Lactic, data=cheddar)
+mod5 <- lm(taste ~ I(Acetic + H2S) + Lactic, data=cheddar)
+```
+
+Three points to draw your attention to that we have not explicitly covered so far:
+
+  - Model 1 does not contain any explanatory variables, only an intercept. To code this in R, we add `1` to the right side of the model specification in `lm()`. (If there are explanatory variables in the model, R will by default add an intercept, so you do not need to add the `1`. But it does not break the model to do so, for example `lm(taste ~ 1 + Acetic, data=cheddar)` will fit the same model as Model 2.)
+  - Model 3 does not contain an intercept. To code this in R, we add `-1` to the right side of the model specification in `lm()`. Look at the summary output for Model 3 to see that the `(Intercept)` row is removed from the coefficients table compared (for example) to the full model.
+  - Model 5 contains one parameter ($\beta_1$) that represents the effect of the sum of `Acetic` and `H2S` on the mean of `taste`. There are a few ways to do this in R. The method shown above, `I(Acetic + H2S)`, uses the `I()` function, which prohibits the plus sign inside the parentheses from being interpreted by `lm()`. This is also how we could add polynomial terms to our model, e.g. `lm(taste ~ I(Acetic^2), data=cheddar)`. An alternative way to add the `Acetic + H2S` term to the model would be to create an additional column in the data, where the $i$th entry is the sum of the $i$th Acetic and $i$th H2S values, and then use that column in the model. If you have time, give this a try to show they are equivalent.
+
+#### 2. Print the model summary for the Full Model. Find the  $F$-statistic for the full model. 
+
+Where is this reported in the R output?
+
+```{r}
+summary(full)
+```
+
+#### 3. Find the $F$-statistic.
+
+Calculate the residual sum of squares (RSS), $\sum_{i=1}^n e_i^2$, for the Full Model and for Model 1. Then find the residual degrees of freedom for each model. Then calculate $\frac{(RSS_{mod1}-RSS_{full})/(df_{mod1}-df_{full})}{RSS_{full}/df_{full}}$
+
+```{r}
+rss_full <- sum(full$residuals^2)
+rss_mod1 <- sum(mod1$residuals^2)
+df_full <- full$df.residual # 30-4 = 26
+df_mod1 <- mod1$df.residual # 30-1 = 29
+
+value <- ((rss_mod1 - rss_full)/(df_mod1-df_full)) / (rss_full/df_full)
+value
+```
+
+Where do you see this value in the `lm()` output from the Full Model?
+
+#### 4. Find the $p$-value.
+
+In the previous equation, we will refer to $(df_{mod1}-df_{full})$ as the *numerator degrees of freedom* and $df_{full}$ as the denominator degrees of freedom. These define an $F$ distribution with which we can compare the value we just calculated.
+
+```{r}
+1 - pf(value, df1=df_mod1-df_full, df2=df_full)
+1 - pf(16.22143, df1=3, df2=26) # a version with the numbers typed in so it's a little easier to see
+```
+
+You should also be able to find this number in the `lm()` output above. 
+
+This is the $p$-value for a hypothesis test. We'll get to this in lecture soon. But, basically, the test is comparing the model we've named Full Model to the empty (intercept only) model, which we've named Model 1. The null hypothesis is that the empty model is sufficient to explain the variability in the response, and the alternative hypothesis is that the more complex model actually does a better job explaining the variability in the response. The small $p$-value (much less than 0.05) indicates that we reject the null hypothesis in favor of the alternative, and prefer the more complex model.
+
+#### 5. You try! 
+
+Use the same approach to compare Model 2 with Model 1. In this case, Model 2 will take the place of the Full Model previously.
+

@@ -1,0 +1,307 @@
+---
+title: "ST 552: Lab 5"
+date: "February 8, 2023"
+output: html_document
+---
+
+## Outline
+
+- Linear Hypothesis Testing
+  - Single parameter
+  - Multiple parameter
+  - Confidence regions
+
+## Introduction to Data
+
+Let's return to the mammalian brain weight data we looked at before in Lecture 6. Recall that we are modeling the average brain weight of 96 species of mammals using their average body weight, average gestation length, and average litter size as explanatory variables,
+
+$$\text{Brain}_i = \beta_0 + \beta_1\text{Body}_i + \beta_2\text{Gestation}_i + \beta_3\text{Litter}_i + \varepsilon_i$$
+
+In this model, we are assuming $\varepsilon_i \sim N(0,\sigma^2)$.
+
+```{r}
+library(Sleuth3)
+data(case0902)
+head(case0902)
+```
+
+First, let's fit the full model, which will have `Brain` as the response and the other numeric variables as explanatory variables as given in the equation above.
+
+```{r}
+full <- lm(Brain ~ Body + Gestation + Litter, data=case0902)
+summary(full)
+```
+
+## Linear Hypothesis Testing: Single Parameter
+
+#### 1. Test the null hypothesis that `Litter` size does not have an effect on mean brain weight, versus a two-sided alternative. 
+
+This test is $H_0: \beta_3=0$ versus $H_1: \beta_3 \neq 0$. Equivalently, the null hypothesis is $\boldsymbol{c}^T\boldsymbol{\beta}=0$ where $\boldsymbol{c}^T=(0,0,0,1)$.
+
+The test statistic is 
+
+\begin{equation}
+\frac{\boldsymbol{c}^T\hat{\boldsymbol{\beta}}-\boldsymbol{c}^T\boldsymbol{\beta}}{\sqrt{\hat{\sigma}^2\boldsymbol{c}^T(\boldsymbol{X}^T\boldsymbol{X})^{-1}\boldsymbol{c}}} = \frac{\hat{\beta}_3-0}{\sqrt{\hat{\sigma}^2(\boldsymbol{X}^T\boldsymbol{X})^{-1}_{(4,4)}}} = \frac{\hat{\beta}_3}{SE(\hat{\beta}_3)}
+\end{equation}
+
+The test statistic (1.588) is given in the `lm()` output, but we will look at how to calculate it 'by hand' to understand where the number comes from. In the code below, pay attention to which elements of the coefficients table are being extracted.
+
+Here are two shorter ways to get the test statistic (which are specific to this form of hypothesis test):
+
+```{r}
+# Short way, specific to this type of test (single coefficient being equal to 0)
+# This is the rightmost term of the equality above
+tstat1 <- full$coefficients[4] / summary(full)$coefficients[4,2]
+tstat1
+
+# This is the middle term of the equality above (using the 4,4 entry of the variance-covariance matrix)
+tstat2 <- full$coefficients[4] / sqrt(vcov(full)[4,4])
+tstat2
+```
+
+(Both of the above denominators are a way to extract the standard error of $\hat{\beta}_3$.)
+
+Here is a longer way to get the test statistic (which is more general):
+
+```{r}
+# Long way, works for any single parameter test
+# I could run this same code, and all I would need to change is the `const` vector
+# This is the leftmost term of the equality above
+const <- c(0, 0, 0, 1)
+betahat <- full$coefficients
+sigmahat2 <- summary(full)$sigma^2
+X <- model.matrix(full)
+
+tstat3 <- (t(const) %*% betahat - 0) / (sqrt(sigmahat2 * t(const) %*% solve(t(X) %*% X) %*% const))
+tstat3
+```
+
+So now we have reproduced the test statistic. Let's also get the $p$-value for the test by comparing with the appropriate null distribution, which is a $t$ distribution with $n-(p+1))$ degrees of freedom, where $n$ is the number of observations in the data (96) and $p$ is the number of predictors in the model (3).
+
+```{r}
+n <- nrow(case0902) #96
+2*(1-pt(abs(tstat1), df=n-4)) #two-sided alternative
+```
+
+Confirm that this is the same $p$-value as the `lm()` output above. Because $p=0.12 > 0.05$, we would fail to reject the null hypothesis at significance level $\alpha=0.05$. We do not have enough evidence to conclude that litter size is associated with mean brain weight.
+
+#### 2. You try:
+
+Calculate the the test statistic and $p$-value to test whether or not `Gestation` length is associated with mean brain weight. Confirm your values using the `lm()` output. What is your interpretation of the $p$-value in the context of the data?
+
+```{r}
+
+```
+
+
+#### 3. Let's do a slightly more complex single parameter test. 
+
+Now let's test $H_0:\beta_1=\beta_2$ versus $H_1:\beta_1\neq\beta_2$. The results of this test are not shown in the default `lm()` summary, since it's a more specialized test we may only be interested in in some scenarios. We can actually do this easily using the code above, we just need to modify the constant vector.
+
+```{r}
+const <- c(0, 1, -1, 0)
+betahat <- full$coefficients
+sigmahat2 <- summary(full)$sigma^2
+X <- model.matrix(full)
+
+tstat4 <- (t(const) %*% betahat - 0) / (sqrt(sigmahat2 * t(const) %*% solve(t(X) %*% X) %*% const))
+tstat4
+
+2*(1-pt(abs(tstat4), df=n-4))
+```
+
+What do you conclude?
+
+This test is actually a test of a *subspace* -- i.e., $\beta_1$ and $\beta_2$ can take on multiple values where they are equal to each other. They could both be 1, both be 2, both be 3, etc. This test is equivalent to considering a model where we add the two terms together, and use that term in place of the individual terms. (See p. 38-39 of your Textbook for more info.) 
+
+```{r}
+mod.subspace <- lm(Brain ~ I(Body + Gestation) + Litter, data=case0902)
+anova(mod.subspace, full)
+```
+
+Remember from the previous lab that we can use the `I()` function to make combinations of our explanatory variables in the model.
+
+We use the `anova()` function to compare the two models -- more on this below. For now, observe that the $p$-value is the same as what we calculated by hand. Here we have an $F$ statistic rather than a $t$ statistic. Why is that? For models that differ by a single parameter (i.e., the full model has 4 parameters and the subspace model has 3 parameters), $t^2=F$. So if we square our $t$ statistic we calculated by hand, we get the $F$ statistic in the table. The tests are equivalent, which is why the $p$-values are the same.
+
+```{r}
+tstat4^2
+```
+
+
+#### 4. You try: 
+
+Test the null hypothesis $H_0: \beta_1 = 2 \beta_2$ versus the two-sided alternative. To do this, calculate a test statistic and $p$-value, and interpret the results of the test.
+
+```{r}
+
+```
+
+#### 5. Confidence intervals
+
+Let's find a 95\% confidence interval for the estimate $\hat{\beta}_3$ (relative to the model in part (1)). We can find this 'by hand' and then use the `confint()` function to confirm.
+
+We want $$\hat{\beta}_3 \pm t_{n-(p+1)}(\alpha/2)SE(\hat{\beta}_3)$$ where $t_{n-(p+1)}(\alpha/2)$ is the $t$ distribution with $n-(p+1)=96-4=92$ degrees of freedom, and $\alpha=0.05$ corresponding to the 95\% confidence level we want so we look up the 0.975 quantile.
+
+```{r}
+# By hand
+full$coefficients[4] + c(-1, 1) * qt(0.975, df=n-4) * summary(full)$coefficients[4,2]
+
+# Using the confint function
+confint(full)
+
+confint(full, parm="Litter")
+```
+
+The `confint()` function by default gives us intervals for all the parameters, so we can specify a specific one we want using the `parm=` argument. We could have also changed the confidence level if we wanted using the `level=` argument.
+
+This confidence interval provides a range of plausible values for $\beta_3$. Because the interval contains 0, this is analogous to our conclusion from part (1) that we would fail to reject the null hypothesis that $\beta_3=0$.
+
+
+## Linear Hypothesis Testing: Multiple Parameters
+
+#### 1. Find the **overall regression $F$-statistic** in the `lm()` output (bottom row).
+
+```{r}
+summary(full)
+```
+
+This is actually a test of the full model ($\Omega$) versus the intercept only model ($\omega$), $\text{Brain}_i = \beta_0 + \varepsilon_i$. Let's see this mathematically:
+
+```{r}
+mod0 <- lm(Brain ~ 1, data=case0902)
+
+RSSfull <- sum(full$residuals^2)
+RSS0 <- sum(mod0$residuals^2)
+pfull <- 4 # number of parameters in full model
+p0 <- 1 # number of parameters in reduced model
+n <- nrow(case0902) # 96
+
+Fstat <- ((RSS0 - RSSfull)/(pfull-p0)) / (RSSfull/(n-pfull))
+Fstat
+```
+
+This is the same $F$ statistic as in the bottom row of the `lm()` output. Now let's get the $p$-value (it is so small that R rounds it down to 0):
+
+```{r}
+1 - pf(Fstat, df1=pfull-p0, df2=n-pfull)
+1 - pf(130.7299, df1=3, df2=92) # same thing, with numbers plugged in so it's easier to see
+```
+
+An equivalent way to do this in R is to use the `anova()` function, which computes analysis of variance tables on one or more fitted model objects. We can provide the function with the names of two models to compare. By convention, the smaller model ($\omega$) is given first:
+
+```{r}
+anova(mod0, full)
+```
+
+Notice we get the same $F$-statistic and $p$-value. In this case, $p < 0.05$ (by a lot!) so we would reject the null hypothesis. There is strong evidence that the full model fits better than the intercept only model.
+
+A side note:
+
+```{r}
+# these are equivalent for the RSS
+sum(full$residuals^2) # sum of squared residuals
+summary(full)$sigma^2 * full$df.residual # residual standard error * residual df
+```
+
+There are many ways to get the same pieces of information from R - find something that works for you!
+
+
+#### 2. Find the $F$-statistic for testing the null hypothesis that $\beta_2=\beta_3=0$ in the full model. 
+
+So now, rather than using the intercept only model as $\omega$, we write down a different null model, namely 
+
+$$\text{Brain}_i = \beta_0 + \beta_1\text{Body}_i + \varepsilon_i$$ since we are restricting $\beta_2$ and $\beta_3$ to be equal to zero.
+
+Let's fit that model. Notice in the coefficients table that this is now a simple regression model (one row for intercept, one row for one explanatory variable).
+
+```{r}
+mod1 <- lm(Brain ~ Body, data=case0902)
+summary(mod1)
+```
+
+Here is the $F$-statistic and $p$-value for this model comparison:
+
+```{r}
+anova(mod1, full)
+```
+
+This $p$-value is also very small. We would reject the null hypothesis that $\beta_2=\beta_3=0$, and conclude that at least one of $\beta_2$ or $\beta_3$ is not equal to 0. Said another way, the full model appears to fit better than the restricted model with only an intercept and `Body` weight.
+
+
+#### 3. Let's calculate the $F$-statistic 'by hand' in R two ways (i.e., without using the `anova()` command).
+
+First, we can do this using the residual sums of squares, as above:
+
+```{r}
+RSSfull <- sum(full$residuals^2)
+RSS1 <- sum(mod1$residuals^2)
+pfull <- 4 # number of parameters in full model
+p1 <- 2 # number of parameters in reduced model
+n <- nrow(case0902) # 96
+
+Fstat <- ((RSS1 - RSSfull)/(pfull-p1)) / (RSSfull/(n-pfull))
+Fstat
+```
+
+Same $F$-statistic!
+
+Second, we can do this without even fitting the reduced model. Recall,
+
+\begin{equation}
+F=\frac{(\boldsymbol{K}\hat{\boldsymbol{\beta}})^T(\boldsymbol{K}(\boldsymbol{X}^T\boldsymbol{X})^{-1}\boldsymbol{K}^{T})^{-1}(\boldsymbol{K}\hat{\boldsymbol{\beta}})/m}{\hat{\sigma}^2}
+\end{equation}
+
+Although this looks long, we know how to code matrix operations in R, so we just need to write down the right matrices and vectors. $\boldsymbol{K}$ is a $2\times 4$ matrix -- two rows because we are testing two hypotheses (that both $\beta_2=0$ and $\beta_3=0$) and four columns because there are 4 parameters in the full model. In this set up, $\boldsymbol{\ell}=(0,0)^T$ and $m=2$.
+
+```{r}
+K <- matrix(c(0,0,0,0,1,0,0,1), nrow=2)
+K
+
+betahat <- full$coefficients
+X <- model.matrix(full)
+m <- 2
+sigmahat2 <- summary(full)$sigma^2
+
+Fstat <- t(K%*%betahat) %*% solve(K %*% solve(t(X)%*%X) %*% t(K)) %*% (K%*%betahat)/m / sigmahat2
+Fstat
+```
+
+Same $F$-statistic!
+
+
+#### 4. You try! 
+
+Test the null hypothesis that $\beta_0=\beta_3=0$. To do this, calculate the test statistic and $p$-value. What do you conclude?
+
+
+#### 5. Confidence regions.
+
+How about a confidence region, which is like a confidence interval but in more than one dimension? Here's an example of the confidence region for $(\beta_1,\beta_2)$, using the `ellipse` package. (More info can be found on p. 44-45 of your textbook.)
+
+```{r}
+library(ellipse) # may need to install package if you don't have it
+
+plot(ellipse(full, c(2,3)), type="l", ylim=c(0,2.75), xlim=c(0,1.25)) # the c(2,3) indicates that we want to examine the second and third parameters in the model which are beta1 and beta2
+
+abline(h=0, lty=3) # add horizontal line at 0
+abline(v=0, lty=3) # add vertical line at 0
+abline(a=0,b=1, col="red") # add the y=x line in red
+abline(a=0,b=0.5, col="blue") # add the y=0.5x line in blue
+```
+
+The ellipse shape and its interior give the values of $\beta_1$ (`Body`) and $\beta_2$ (`Gestation`) that are plausible given our data and model. This is a 95\% confidence region based on the default settings of the `ellipse()` function, but we could change that with the `level=` argument.
+
+A few notes:
+
+- The horizontal line at 0 does not intersect the confidence region. This is analogous to our finding from *Single Parameter Tests* part (2) that `Gestation` does appear to be associated with mean brain weight (reject $H_0: \beta_2=0$).
+- The vertical line at 0 does not intersect the confidence region. This is analogous to the single parameter test that we would reject $H_0: \beta_1=0$ (see `lm()` output for the full model) and conclude that `Body` weight does appear to be associated with mean brain weight.
+- The point (0,0) is not contained within the confidence region. This is analogous to rejecting the *multiple parameter test* $H_0: \beta_1=\beta_2=0$. We did not explicitly do this test above, but you can try it quickly to confirm.
+- However, there are some points along the $y=x$ line (or, equivalently, $\beta_1=\beta_2$ line) that fall within the ellipse. (Red line intersects ellipse.) This is analogous to our conclusion from *Single Parameter Tests* part (3) that we fail to reject the null hypothesis that $\beta_1=\beta_2$. 
+- Does the fact that the blue line, $y=0.5x$, does not intersect the confidence region back up your answer from *Single Parameter Tests* part (4)?
+
+We don't need to see how to calculate these 'by hand' in this course, although the intuition is that the joint confidence region is the region that is composed of $\boldsymbol{x}$ that satisfy
+
+\begin{equation}
+\left\{\boldsymbol{x}: (\boldsymbol{x}-\boldsymbol{K}\hat{\boldsymbol{\beta}})^T(\boldsymbol{K}(\boldsymbol{X}^T\boldsymbol{X})^{-1}\boldsymbol{K})^{-1}(\boldsymbol{x}-\boldsymbol{K}\hat{\boldsymbol{\beta}}) \leq m\hat{\sigma}^2F_{p+1,n-p-1}(\alpha) \right\}
+\end{equation}
+

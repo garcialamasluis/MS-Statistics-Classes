@@ -1,0 +1,151 @@
+---
+title: "Statistical-Methods-2-Homework-3"
+output: pdf_document
+date: "2023-02-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Problem 1)
+
+
+### a)
+
+Here, since without loss of generality we can assume the first K observations are from treatment group 1. The first 3 observations would be from treament group J=1. This would be true for the next 2 treament groups, with a total of 9 observations. Also, each indicator variable can be represented as 1 or 0, so:
+
+\[ \boldsymbol{X} = \begin{pmatrix} 1 & 0 & 0 \\ 1 & 0 & 0 \\ 1 & 0 & 0 \\ 0 & 1 & 0 \\ 0 & 1 & 0 \\ 0 & 1 & 0 \\ 0 & 0 & 1 \\  0 & 0 & 1 \\  0 & 0 & 1 \end{pmatrix}\]
+
+### b)
+
+We can represent the mean response of the jth treament group, because our response variables $Y_1, ..., Y_9$ can have a represented mean of the jth treament group as they are consecutive. So the mean response for the 1st treatment group would $ = (Y_1 + Y_2 + Y_3)/3 $ and so on for the other treatment groups. To verify this we can use the formula to find the beta coeffecients:
+
+```{r}
+
+X <- cbind(c(1,1,1,0,0,0,0,0,0),c(0,0,0,1,1,1,0,0,0),c(0,0,0,0,0,0,1,1,1))
+
+before_y <- solve(t(X)%*%X)%*%t(X)
+before_y
+```
+
+Which multiplied with $\boldsymbol{Y} = \begin{pmatrix} Y_1 \\ \vdots \\ Y_9\end{pmatrix}$ would equal:
+
+$\boldsymbol{\hat{\beta}} = \begin{pmatrix} \frac{Y_1 + Y_2 + Y_3}{3}\\ \frac{Y_4 + Y_5 + Y_6}{3} \\ \frac{Y_7 + Y_8 + Y_9}{3} \end{pmatrix}$
+
+Hence, we verified the that b hats of each treatment group j is equal to the mean response of the jth treatment group. 
+
+### c)
+
+To do this, we find the variance - covariance matrix:
+
+```{r}
+
+vcov <- solve(t(X)%*%X)
+vcov
+```
+
+No matter the $\sigma^2$, the constants in the diagonal of the matrix should hold the same values, therefore interpreting this matrix we can clearly see that the variance are the same for the coefficients, and that there is no covariance (cov = 0) between them therefore are uncorrelated. 
+
+
+\newpage
+
+# Problem 2)
+
+### a) and b)
+
+We can determine residuals by: $Y_i - \hat{Y}_i$ and this can be extended to 
+\( \boldsymbol{e}_{n \times 1} = \boldsymbol{Y} - \boldsymbol{\hat{Y}} \)
+
+$$ \sum \boldsymbol{e}_{n \times 1} = \sum \boldsymbol{Y} - \boldsymbol{\hat{Y}} = \sum Y - \boldsymbol{X}(\boldsymbol{X}^T\boldsymbol{X})^{-1}\boldsymbol{X}^T\boldsymbol{Y} = 0 $$
+
+Which is sum of observed responses, minus the sum of predicted response. Given that prediction is based on the responses, the difference will be 0. This is a generalization from p explanatory variables but it can can be simplified with p = 1 for OLS. 
+
+c)
+
+No, typically this is randomness around the normal distribution with mean of 0. Although our expected value might zero for this sum, that doesn't mean it will always be 0. This is inherent with a property of a random variable, as it can vary. 
+
+\newpage
+
+# Problem 3)
+
+Here we can use the unbiased estimate of sigma. 
+
+### a)
+
+```{r}
+library("faraway")
+X <-as.matrix(cbind(intercept=rep(1,47),teengamb[,-5]))
+Y <-teengamb[,5]
+I <- diag(Y)
+H <- X%*%solve(t(X)%*%X)%*%t(X)
+n <- dim(teengamb)[1]
+
+ete <- t(Y-H%*%Y)%*%(Y-H%*%Y)
+sigma <- sqrt(ete/(n-(4+1)))
+sigma
+```
+
+Our residual standard error is 22.69, which in this context means our predicted vs actual values vary with about a standard deviation of 22.69. 
+
+### b)
+
+```{r}
+
+mod <- lm(teengamb$gamble ~ teengamb$sex +teengamb$status+teengamb$income+teengamb$verbal)
+print(sigma(mod))
+
+```
+
+### c)
+
+```{r}
+vcov <- 22.69034^2*solve(t(X)%*%X)
+vcov
+vcov(mod)
+```
+
+\newpage
+
+# Problem 4)
+
+### a)
+
+```{r}
+library("Sleuth3")
+data <- case1002
+```
+
+Consider the model below:
+
+\[ \text{Energy} = \beta_0 + \beta_1 \text{Mass} + \beta_2 \text{Non Echolocating bat} + \beta_3 \text{Non Echolocating Bird} + \beta_4 \text{Mass}*\text{Non Echolocating Bat} + \beta_5 \text{Mass}*\text{Echolocating Bird}\]
+
+Where Energy is predicted in-flight energy expenditure (in watts), Mass is body mass (in grams), and we split up each type into its own category along with the interaction. So in this case, echolocating bat would be the case when the other 2 types are = 0, so in a sense its apart of the intercept. 
+
+### b)
+
+```{r}
+mod2 <- lm(Energy ~ Mass + Type + Mass:Type, data = data)
+summary(mod2)
+```
+
+To find the mean energy expenditure for non-echolocating bats when mass is held at zero, we plug in the values with the estimated coefficients. Here, non-echolocating bats = 1 and Mass = 0, so:
+
+```{r}
+mod2$coefficients[1] + mod2$coefficients[2]*0+mod2$coefficients[3]*1 + mod2$coefficients[5]*0*1
+```
+
+To find the mean energy expenditure for non-echolocating birds when mass is held at zero, we plug in the values with the estimated coefficients. Here, non-echolocating birds = 1 and Mass = 0, so:
+
+```{r}
+mod2$coefficients[1] + mod2$coefficients[2]*0+mod2$coefficients[4]*1 + mod2$coefficients[6]*0*1
+```
+
+To find the mean energy expenditure for echolocating bats, we simply don't indicate for the other 2 types (non echolocating) and we also hold mass at zero. So in this case, it's actually the intercept!
+
+```{r}
+mod2$coefficients[1] + mod2$coefficients[2]*0
+```
+
+I will choose $\beta_5$ which is the interaction between mass and non echolocating bird type. This coeffecient gives the difference in the change in the mean of energy expenditure when mass is increased by one unit and when the type is non echo locating bird. (ie = 1), compared to when mass is increased by one unit when the type is NOT non echo locating bird (ie = 0). That difference would be -.02186. 
+

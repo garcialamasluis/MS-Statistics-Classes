@@ -1,0 +1,279 @@
+---
+title: "ST 552: Lab 3"
+date: "January 25, 2022"
+output: html_document
+---
+
+## Outline
+
+- Meadowfoam data example (5 models)
+- Writing functions
+- Using `for` loops and the `apply` family of functions
+
+## Meadowfoam data example
+
+Meadowfoam is a seed oil crop. These data come from an experiment designed to determine conditions that may increase meadowfoam production. In particular, the experiment looked at
+
+- Six levels of light **intensity** (150, 300, 450, 600, 750, and 950 $\mu$-mol/$m^2$/sec) [numerical explanatory variable]
+- Two levels of **timing** of the onset of the light treatment (at PFI and 24 days before PFI, where PFI is the time of Photo-periodic Floral Induction) [non-numerical categorical explanatory variable]
+
+There were 120 seedlings (experimental units) that were randomly assigned to each combination of treatment (10 seedlings each). The response is the average number of flowers over the 10 seedlings. The experiment is repeated, so there are two responses per treatment.
+
+Let's look at the data, which are in `case0901` from the `Sleuth3` package.
+
+```{r echo=TRUE}
+library(Sleuth3)
+#View(case0901) # this will pop up another tab that has a data viewer
+dim(case0901)
+```
+
+*Why are there 24 rows?*
+
+(Answer: 6 levels of light x 2 levels of timing x 2 replicates)
+
+First, let's plot the data to start examining the relationships between the explanatory variables and response. We will put `Flowers` on the $y$-axis, `Intensity` on the $x$-axis, and color the points by `Time`.
+
+```{r}
+library(ggplot2)
+ggplot(case0901, aes(x=Intensity, y=Flowers, color=Time)) +
+  geom_point()
+```
+
+What do you observe? The first thing I notice is that even though `Time` should be a categorical variable (levels = at PFI, before PFI), it was coded as having values 1 and 2, so R has treated it as numerical and created a scale in the legend. This is not very helpful so let's make it a factor first.
+
+```{r}
+library(ggplot2)
+ggplot(case0901, aes(x=Intensity, y=Flowers, color=factor(Time))) +
+  geom_point() +
+  labs(color = "Time") # change the legend title, since now it was "factor(Time)"
+```
+
+Now what do you observe? Let's think about some different models we could fit (some different lines we could draw).
+
+#### Model 1: No lines (no `Intensity` treatment)
+
+This model uses an indicator variable for `Time`. I will code the indicator by hand here so it's clear which level is which, although this isn't necessary. Let `Day24` = 1 if the unit got light 24 days early, and 0 if it did not.
+
+This model is $E(\text{Flowers} | \text{Day24}) = \beta_0 + \beta_1\text{Day24}$.
+
+So, 
+
+- $E(\text{Flowers} | \text{Day24} = 0) = \beta_0$ 
+- $E(\text{Flowers} | \text{Day24} = 1) = \beta_0 + \beta_1$
+
+```{r}
+case0901$Day24 <- ifelse(case0901$Time == 2, 1, 0)
+
+mod1 <- lm(Flowers ~ Day24,  data = case0901)
+summary(mod1)
+```
+
+In this model, we would estimate the average number of flowers is $\hat{\beta}_0$ when `Day24` = 1, and the average number of flowers is $\hat{\beta}_0 + \hat{\beta}_1$ when `Day24` = 0. This is why I say this model has no lines - there are only two unique values of average number of flowers we would predict.
+
+As an aside, if we have a continuous response and one explanatory variable that takes on two categorical levels, how have you handled this before? Compare the test statistic and $p$-value from the `lm()` output to the `t.test()` output. What do you notice?
+
+```{r}
+t.test(Flowers ~ Day24, data=case0901, var.equal=TRUE)
+```
+
+
+#### Model 2: Equal lines (no `Time` treatment)
+
+This model is $E(\text{Flowers} | \text{Intensity}) = \beta_0 + \beta_1\text{Intensity}$. 
+
+It is a **simple linear regression** model.
+
+```{r}
+mod2 <- lm(Flowers ~ Intensity, data=case0901)
+summary(mod2)
+```
+
+Practice your interpretation of the model output. What does $\hat{\beta}_1$ mean?
+
+Let's plot the regression line from this model:
+
+```{r}
+ggplot(case0901, aes(x=Intensity, y=Flowers)) +
+  geom_point() +
+  geom_abline(intercept=mod2$coefficients[1], slope=mod2$coefficients[2])
+```
+
+There are lots of ways to add the regression line to the plot. Previously, you have seem `geom_smooth(method="lm", se=FALSE)`. Here I demonstrate using `geom_abline()` and manually setting the intercept and slope. This method is very similar to base R approaches using `abline()`.
+
+How does this model look? On the surface, this model seems like it's doing okay, but based on our initial plot of the data with the points colored by `Time` we know we are missing the impact of one of the factors in our experiment.
+
+#### Model 3: Parallel lines (`Intensity` and `Time` treatments, no interaction)
+
+This model is $E(\text{Flowers} | \text{Intensity,  Day24}) = \beta_0 + \beta_1\text{Intensity} + \beta_2\text{Day24}$. 
+
+It is a **multiple linear regression** model.
+
+```{r}
+mod3 <- lm(Flowers ~ Intensity + Day24, data=case0901)
+summary(mod3)
+```
+
+What are the *parallel* lines I mentioned in the section header?
+
+- When `Day24`=0, $E(\text{Flowers} | \text{Intensity, Day24}=0) = \beta_0 + \beta_1\text{Intensity}$
+- When `Day24`=1, $E(\text{Flowers} | \text{Intensity,  Day24}=1) = \beta_0 + \beta_2 + \beta_1\text{Intensity}$
+
+So these two lines have the same slope ($\beta_1$) but different intercepts. When `Day24`=0, the intercept is $\beta_0$ and when `Day24`=1, the intercept is shifted to $\beta_0+\beta_2$. This is a vertical shift (moving the $y$-intercept up or down), so the lines are still parallel.
+
+Let's plot it:
+
+```{r}
+ggplot(case0901, aes(x=Intensity, y=Flowers, color=factor(Day24))) +
+  geom_point() +
+  geom_abline(intercept=mod3$coefficients[1], slope=mod3$coefficients[2], color="red") +
+  geom_abline(intercept=mod3$coefficients[1]+mod3$coefficients[3], slope=mod3$coefficients[2], color="blue") +
+  labs(color="Day24")
+```
+There does seem to be an impact based on `Day24` (two lines are different), which is backed up by the significant $p$-value of this term in the `lm()` model output. (Go reference the output to find the $p$-value.) 
+
+It appears that plants given the light treatment 24 days before PFI (`Day24`=1) tend to produce more flowers on average (compared with plants given the light treatment at PFI (`Day24`=0)), and that this generally holds regardless of the level of light intensity. I made this conclusion because of the positive coefficient estimate on the `Day24` term (12.158), making sure I kept straight what the reference category was, and the fact that the $p$-value is significant. I can see this in the plot because the the `Day24`=1 line is above the `Day24`=0 line.
+
+What does the design matrix $\mathbf{X}$ look like for this model? First of all, $\mathbf{X}$ should have dimension $n \times (p+1) = 24 \times 3$. Let's print the design matrix. Make sure you know how you would write this down if given the data.
+
+```{r}
+model.matrix(mod3)
+```
+
+
+#### Model 4: Non-parallel lines (`Intensity` and `Time` treatments, with interaction)
+
+This model is $E(\text{Flowers} | \text{Intensity,  Day24}) = \beta_0 + \beta_1\text{Intensity} + \beta_2\text{Day24} + \beta_3(\text{Intensity}\times\text{Day24})$. 
+
+It is also a **multiple linear regression** model. Observe the two ways of specifying an interaction in R:
+
+```{r}
+mod4 <- lm(Flowers ~ Intensity*Day24, data=case0901)
+# note this is equivalent to 
+#mod4 <- lm(Flowers ~ Intensity + Day24 + Intensity:Day24, data=case0901)
+summary(mod4)
+```
+
+What are the lines?
+
+- When `Day24`=0, $E(\text{Flowers} | \text{Intensity,  Day24}=0) = \beta_0 + \beta_1\text{Intensity}$
+- When `Day24`=1, $E(\text{Flowers} | \text{Intensity, Day24}=1) = \beta_0 + \beta_2 + \beta_1\text{Intensity} + \beta_3\text{Intensity}$
+
+So these two lines have different intercepts *and* different slopes. When `Day24`=0, the intercept is $\beta_0$ and the slope is $\beta_1$. When `Day24`=1, the intercept is $\beta_0+\beta_2$ and the slope is $\beta_1+\beta_3$.
+
+Let's plot it:
+
+```{r}
+ggplot(case0901, aes(x=Intensity, y=Flowers, color=factor(Day24))) +
+  geom_point() +
+  geom_abline(intercept=mod4$coefficients[1], slope=mod4$coefficients[2], color="red") +
+  geom_abline(intercept=mod4$coefficients[1]+mod4$coefficients[3], slope=mod4$coefficients[2]+mod4$coefficients[4], color="blue") +
+  labs(color = "Day24")
+```
+
+> Why do the lines still look approximately parallel? What does this tell us about the interaction between `Intensity` and `Day24`? (Hint: look at $\hat{\beta}_3$). 
+
+> How might this plot look different if there was a larger interaction between `Intensity` and `Day24`?
+
+How will the design matrix $\mathbf{X}$ change for this model compared to the previous one? Make sure you understand how the fourth column was created.
+
+```{r}
+model.matrix(mod4)
+```
+
+
+#### Model 5 (for you to try if there's extra time at the end)
+
+What if `Intensity` was treated as a categorical variable (factor), rather than numeric? Try creating fitting this model with categorical `Intensity`, `Day24`, and their interaction. What do you observe?
+
+```{r}
+
+```
+
+
+
+## Writing Functions in R
+
+You can write your own functions in R. Here is an example of a function that takes a vector of $n$ numbers and returns the sum of the first $n-1$ numbers. So the function would take the vector (1,4,6) and return 5.
+
+We name the function `myfunc` and then inside `function()` we specify what input(s) the function should have. Then inside the curly braces we specify what the function should do. So first it finds `n`, which is the length of the vector, and then it takes the sum of the `1:(n-1)` elements of the vector.
+
+```{r}
+myfunc <- function(x) {
+  n <- length(x)
+  sum(x[1:(n-1)])
+}
+```
+
+If we just run the function, R won't produce any output because we have not given it a vector to evaluate yet. Let's give it a try with a few vectors:
+
+```{r}
+myfunc(1:5)
+myfunc(c(1,5,3,10))
+myfunc(1:1000)
+```
+
+Try on your own for a few more vectors, of different lengths.
+
+> You try! Write a function that takes a vector and returns the product of the first and last elements of the vector. So, for example, the function would take the vector (1,4,6) and return $1^2 + 6^2 = 37$.
+
+```{r}
+
+```
+
+
+## Loops in R
+
+#### `for` loops
+
+Loops are a general programming structure that performs repetition. A `for` loop repeatedly evaluates its contents as it cycles through its argument. For example, in the following loop, the argument `i` cycles through the values 1 to 10, each time evaluating `print(i)`.
+
+```{r}
+for (i in 1:10) {
+  print(i)
+}
+```
+
+`for` loops do not save anything and if we want to keep our results from each fit we need to store them somewhere explicitly. For example, let's create a vector called `testvec` that will save the output from our loop.
+
+```{r}
+testvec <- vector(mode="numeric", length=10)
+for (i in 1:10) {
+  testvec[i] <- i
+}
+testvec
+```
+
+#### The `apply` family
+
+The `apply` functions in R perform the same computation as loops, but with less work on your part. For example, the following does the same as our above `for` loops.
+
+```{r}
+testvec1 <- sapply(1:10, print)
+```
+
+`sapply` is a simplified version of `apply` that can be used to apply each element of a vector to a function.
+
+There are different `apply` functions (e.g. `lapply`, `apply`, `sapply`) depending on the type of data you want to apply to your function.
+
+Let's try using the function we wrote previously with `sapply`:
+
+```{r}
+out <- sapply(1:5, myfunc)
+out
+```
+
+This doesn't look quite right. What it's doing is applying the vector (1) to our function, then the vector (2) to our function, so it is treating each element of `1:5` as a length 1 vector. So what we actually want is
+
+```{r}
+out1 <- lapply(list(1:5), myfunc)
+out1
+myfunc(1:5)
+```
+
+We have created a *list* with one entry, `1:5`, and applied that to our function. The output is the same as calling our function directly. For one vector, this doesn't really save us time. But `apply` functions allow us to do many of these operations simultaneously in one line of code:
+
+```{r}
+out2 <- lapply(list(1:5, 6:10, 1:10, rep(1,5)), myfunc)
+out2
+```
+
