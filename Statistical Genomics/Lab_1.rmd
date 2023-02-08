@@ -1,0 +1,244 @@
+---
+title: 'Lab 1: Introduction to R'
+output:
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Objectives
+* R and RStudio
+* Data types
+* Heatmap plot
+
+# Introduction
+## R
+R is a programming language that is popular in both academia and industry for conducting statistical analysis and creating graphics from data. Knowing how to program in R (even just a little) is a valuable skill.
+
+You might have some experience working with data in a spreadsheet application like Microsoft Excel, where you point and click to enter data and use buttons, menus, or formulas to perform tasks. Using R is very different. There is no point-and-click interface. You write code to do all your desired calculations and to create graphics. You can enter the code directly into a console which executes your code immediately, but usually you save the code in a .r or .R file which can be executed as a "script". 
+
+Don't worry if you don't have any programming experience. It might take a little practice to get used to R, but we will be using only very basic code, and we'll guide you through all of the code you need to write. 
+
+## RStudio
+
+RStudio is a desktop application that makes it easy to use R and create R programs (usually called scripts). It's not strictly required for using R, but it is highly recommended. Both R and RStudio are completely free. (See the document
+"Installing R and RStudio" on Canvas for help installing them on your computer.) 
+
+# Basics of R
+
+The next several subsections introduce you to the basic R interface and some basic R code (called "functions").
+
+## Getting started with R and RStudio 
+Once you have opened RStudio on your computer, you can see that the RStudio window is divided into four panes: 
+
+* **Script window** is in the upper left hand corner. You may have to click File
+-> New File -> R Script to make a blank script window appear. 
+* **Console** is in the lower left hand corner. The console will display results from commands that you write in the script window. You will also be able to type commands directly into the Console, but we'll generally type commands into the Script Window and then "run" the script (which will automatically put the commands into the console). We'll see how this works below. 
+* **Environment** is in the upper right hand corner. More on this window below. 
+* **Plot window** is in the lower right hand corner. This window will display plots that you make. This is also the window that has help files, which we will explore later. 
+
+## The console
+
+First, look for the pane labeled **Console**. You can enter R code into the console and it will execute as soon as you press **Enter**. One thing you can do is to use the **Console** as a simple calculator. Try entering the following lines at the > prompt and see that you get the same output. 
+
+```{r}
+1 + 2
+4 * 7 + 3
+9^2
+36/3
+```
+
+## Statements, variables, and the environment 
+
+An R program consists of a series of **statements**. Here are two examples of statements: 
+
+```{r}
+x <- 11
+y <- x + 2
+```
+
+The first statement assigns the number 11 to the variable x. Variables store data. (Now we're talking about R variables, which are different from the statistical variables.) They are called variables because their contents can change - you can assign new data to a variable or alter the data already stored there. The <- operator stores the value on the right side in the variable named on the left side. 
+
+The second statement adds 2 to x and stores the result in y. 
+
+Enter each of the statements above into the console. Notice that there is no output, but the variables and their values show up in the pane labeled **Environment**. The environment pane shows all of the variables defined in your current R session. 
+
+You can see what is stored for each variable in the **Environment**, but you can also see what is stored for each variable name in the **Console** window. Return to the **Console** and type that variable name next to the > prompt: 
+
+```{r}
+x
+y
+```
+
+*Note: there is one other way of assigning variables, an equal sign (=). That is, instead of typing x <- 11, we could type x = 11. Both are accepted by R. (Try this yourself to verify.) There are pros and cons for using either way of assigning variables, but we'll tend to use the <- assignment statement in this class. *
+
+## Data forms
+
+A variable contains data of a certain form. One of the most common **data forms** in R is the **vector**. A **vector** is just an ordered list of values. The values can be numbers, text, or logical (TRUE or FALSE), but they must all be the same type of value. Vectors are created using the c function. The c stands for "concatenate". Enter the following statement in the console to define z as a vector of three numbers:
+
+```{r}
+z <- c(3, 17, 42)
+```
+
+To see what the variable z contains, you can look at the environment pane, or you can enter z by itself in the console and R outputs the contents. 
+
+```{r}
+z
+```
+
+Notice that in the environment pane, z has num [1:3] before the values. This tells you that z is a vector of numbers with indices ranging from 1 to 3. (If you have any programming experience, you may be accustomed to indices starting at 0. In R, they always start at 1, so be careful!) For example, in the **Console** window, type the following next to the prompt. Notice that the output will give you only the first value stored in the vector called "z". 
+```{r}
+z[1]
+```
+
+## Functions
+
+We used the c function to create a vector of three numbers. **Functions** are central to R. A **function** takes some input and, after doing a calculation or performing some task, returns some output. To use a function, we enter the function name followed by the input enclosed in parentheses: function(x, y). Commas separate the different parts of the input, which are called **arguments**. Sometimes we include names for the arguments, as in function(arg = x). Naming arguments allows us to specify which argument we are providing data for in cases where the data could apply to any of a number of arguments. We also use names for optional arguments, which are common in R. It's not important for you to understand why some arguments are named and others aren't, just be aware that you will see both types in the code we use. 
+
+We'll discuss many **functions** throughout the course, but just so you have an understanding of what was discussed in the above paragraph, let's calculate an average. Another name for average is mean. The R function "mean" will calculate the average of a vector. For example, let's calculate the average of the three values stored in the variable "z": 
+
+```{r}
+mean(z)
+```
+
+
+## Scripts
+
+When we write R code, it will be easier to type all the code we need in the **Script window** than individually in the **Console window**. Plus, we'll be able to save what we type (the script) in the **Script window**.
+
+In RStudio, open a blank R script using **File** -> **New File** -> **R Script**. This will open the **Editor** pane (if it wasn't already open), which is where you edit R scripts. 
+
+Let's retype some of what we did above into the **Script window**. 
+
+```{r, eval = FALSE}
+z <- c(3, 17, 42)
+z
+z[1]
+ave <- mean(z)
+ave
+```
+
+To run the script, highlight any number of statements in your R script and click **Run** at the top of the editor pane or hit **Ctrl + Enter** (Windows) or **Command + Enter** (Mac), and the statements will be executed in the console. If you place your cursor somewhere in the code without anything highlighted and use the same command, it will execute just the line where your cursor is.
+
+ Use **File** → **Save As** to save the file with a name ending in .r or .R in whatever location you
+like.
+
+
+# Data Types
+
+For each single value in R (like each value in a vector or a matrix), there are several major types: **Quantitative**, **Qualitative** and **Logical**.
+
+* Quantitative: continuous or discrete numeric data, like height (continuous) and 
+day of month (discrete);
+
+* Logical: True or False, in R they will be conveniently treated as 0 and 1.
+
+```{r, eval = FALSE}
+# Variable major includes 10 "math" and 20 "biology"
+major <- c(rep("math", 10), rep("biology", 20))
+
+# Determine who is from "biology", returning a vector of logical values
+major == "biology"
+
+# Determine how many of them are from "biology"
+sum(major == "biology")
+```
+
+* Qualitative: there are two type of qualitative data in R, character and factor. 
+
+    + Character: Name, title;
+
+    + Factor: A factor stores the nominal values as a vector of integers in the range [ 1... k ] (where k is the number of unique values in the nominal variable), and an internal vector of character strings (the original values) mapped to these integers.
+
+```{r, eval = FALSE}
+# Variable gender includes 20 "male" and 30 "female"
+gender <- c(rep("male", 20), rep("female", 30)) 
+
+# Ask R to treat gender as nomimal: 1=female, 2=male (alphabetically)
+gender <- factor(gender)
+summary(gender)
+```
+
+An ordered factor is used to represent an **ordinal variable**.
+
+```{r, eval = FALSE}
+# Variable rating coded as "large", "medium", "small'
+rating <- c(rep("large", 10), rep("medium", 10), rep("small", 10))
+
+# Ask R to treat rating as ordinal: 1=large, 2=medium, 3=small (alphabetically)
+rating <- ordered(rating)
+```
+
+R will treat factors as nominal variables and ordered factors as ordinal variables in statistical procedures and graphical analyses. You can use options in the **factor( )** and **ordered( )** functions to control the mapping of integers to strings (overiding the alphabetical ordering). Here is a example.
+
+```{r, eval = FALSE}
+# The default order is large < medium < small (alphabetical order)
+rating
+
+# Reorder rating variable as small < medium < large
+rating <- ordered(rating, levels = c("small", "medium", "large"))
+rating
+```
+
+# Heatmap
+
+Heatmap is a good way to visualize a data matrix. The function we use is **heatmap.2**, which is from the *gplots* package. Before the first time using this function, you need to install this package. Here is an example.
+
+```{r, eval = FALSE}
+# Install the package
+library(gplots)
+
+# Import the data set
+data.new <- read.table("C:/Users/Luis/Downloads/data_new.txt", 
+                      header = FALSE)
+
+# Check the data dimension
+dim(data.new)
+
+# Take a look
+data.new[, 1 : 6]
+
+# Refresh the plot window
+graphics.off()
+par("mar")
+par(mar = c(1, 1, 1, 1))
+
+# Heatmap
+heatmap.2(as.matrix(data.new), dendrogram = "row", col = redgreen, 
+          key = TRUE, trace = "none", cexRow = 0.4, cexCol = 0.4, labCol = FALSE)
+```
+
+Notice that you need to replace "~/Box Sync/ST592-Winter-2019/Labs/Week 1/data_new.txt" by the directory where you save the data. The final plot should look as follows.
+
+```{r, echo = FALSE, message = FALSE}
+library(gplots)
+data.new <- read.table("data_new.txt", 
+                      header = FALSE) 
+heatmap.2(as.matrix(data.new), dendrogram = "row", col = redgreen, 
+          key = TRUE, trace = "none", cexRow = 0.4,
+          cexCol = 0.4, labCol = FALSE)
+```
+
+
+You can also draw dendrogram (we will learn it later) by columns as follows.
+
+```{r, message = FALSE}
+heatmap.2(as.matrix(data.new), dendrogram = "column", col = redgreen, 
+          key = TRUE, trace = "none", cexRow = 0.4, cexCol = 0.4, labCol = FALSE)
+```
+
+In the **heatmap.2** function, there are several important inputs that might need to be noticed or adjusted.
+
+* data: a matrix of data to be visualized. If you have a data frame or a list, it should be transformed to a matrix by the function **as.matrix**;
+
+* dendrogram: option for plotting the dendrogram. The default would be drawing the dendrograms for both rows and columns, and there are other options: "row", "col" and "none";
+
+* Rowv and Colv: option for reordering the rows and columns to make similar rows and columns close to each other on the heatmap. Both have default TRUE, means rows and columns will both be reordered. Also, if a dendrogram of rows or columns needs to be drawn, then the rows or columns have to be reordered. Try the following example:
+
+```{r, eval=FALSE}
+heatmap.2(as.matrix(data.new), dendrogram = "row", Rowv = FALSE, col = redgreen, 
+          key = TRUE, trace = "none", cexRow = 0.4, cexCol = 0.4, labCol = FALSE)
+```
+
+In this case, you should get a warning message, and there should be no dendrogram on the heatmap.

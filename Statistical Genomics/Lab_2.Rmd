@@ -1,0 +1,215 @@
+---
+title: 'Lab 2: Cluster Analysis Part I'
+output:
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Objectives
+* Dissimilarity Measures
+* K-Means
+* PAM
+* Hierarchical Clustering
+
+# Dissimilarity Measures
+In the lectures we introduced a few distances to measure the dissimilarity between two samples (or variables). In R those distances can actually be calculated by a simple function. Here is an example below.
+
+```{r, eval = FALSE}
+# Import the dataset
+data.new <- read.table("data_new.txt",  header = FALSE)
+
+# Calculate the Manhattan distance between the first two variables using the dist function
+dist(t(data.new[, c(1, 2)]), method = "manhattan")
+
+# Calculate the Manhattan distance between the first two variables using formula
+sum(abs(data.new[, 1] - data.new[, 2]))
+```
+
+The **dist** function is a common function to calculate multiple types of distance between two or more variables. There are few things you might need to notice for this function.
+
+* The first input in the **dist** function is usually a matrix or a data frame. It will automatically calculate the distance between each pair of rows in the matrix/data frame. Thus, if the distances between columns are needed, you need to add **t()** function to transpose the matrix.
+
+* There are several types of distance that the **dist** function can calculate. You can try the **help** function or question mark to see the detail.
+
+```{r, eval = FALSE}
+# The two functions below will give you the same result
+help(dist)
+?dist
+
+# Calculate the Euclidean distance using the dist function
+dist(t(data.new[, c(1, 2)]), method = "euclidean")
+
+# Calculate the Euclidean distance using formula
+sqrt(sum((data.new[, 1] - data.new[, 2])^2))
+```
+
+The **dist** function can also calculate the distance for asymmetric binary variables.
+
+```{r, eval = FALSE}
+# A random number seed can be set if we want our results to be reproducible
+set.seed(12345);
+
+# Generate a data frame with two rows of binary data
+x =  matrix(rbinom(2*20, 1, 0.5), nrow = 2, ncol = 20)
+
+# One can use a for loop to fill the x matrix above,
+# but we try to avoid for loops in R for computational efficiency.
+
+# Calculate the distance by the dist function
+dist(x, method = "binary")
+
+# Calculate the distance by formula
+x.table <- table(x[1, ], x[2, ]);
+(x.table[1, 2] + x.table[2, 1])/(x.table[1, 2] + x.table[2, 1] + x.table[2, 2])
+
+```
+
+The **dist** function can deal with multiple variables instead of just two. When we have a data frame with more than two rows, it will compute distances between all pairs of rows.
+The **dist** function will store the output as a class "dist" object, which we can convert to a distance matrix using `as.matrix`. 
+For more information see the **Value** section in *help(dist)*.
+
+```{r, eval = FALSE}
+dist.eu <- dist(t(data.new), method = "euclidean")
+
+## Convert the dist object to a mtrix
+d = as.matrix(dist.eu)
+dim(d)
+```
+
+
+# Cluster Analysis
+
+## K-means
+
+The function of k-means clustering is `kmeans`. Here is an example.
+
+```{r, eval = FALSE}
+# Create two groups of points from two different populations
+x <- rbind(matrix(rnorm(100, sd = 0.3), ncol = 2),
+           matrix(rnorm(100, mean = 1, sd = 0.3), ncol = 2))
+colnames(x) <- c("x", "y")
+
+# Visualize the data: scatter plot matrix
+plot(x)
+
+# Use K-means clustering to divide the whole group into two clusters
+cl <- kmeans(x, 2)
+
+# Visualize the clusters
+plot(x, col = cl$cluster)
+points(cl$centers, col = 1 : 2, pch = 8, cex = 2)
+```
+
+In the **kmeans** function, there are two input options that you can modify.
+
+* The first input is your data set, the rows of which are treated as data objects to be clustered;
+* The second input is **centers**, which will specify how many clusters you want to be divided from the whole group. The **centers** input can be either a number or a set of initial cluster centers. If it is a number, then it represents the number of clusters you need; if it is a set of initial cluster centers, then the number of clusters will be the number of initial centers you specify, and the start points in k-means algorithm will be those centers;
+
+The output of **kmeans** function contains lots of information. Here I list a few important ones.
+
+* cluster: this output contains a vector of integers, which indicates which cluster each point is allocated;
+* centers: this output contains all the cluster centers for the final clustering;
+* size: this output shows the number of points in each cluster.
+
+For more information of **kmeans** function, you can use help function to see those details.
+
+```{r, eval = FALSE}
+?kmeans
+```
+
+Next, we will apply k-means to a real genetic dataset. The dataset we use next is a gene expression data that contains 47 samples, and 100 genes per sample. The 47 samples belong to two groups (different types of leukemia), which are included in the file "data_type.txt". These two groups will serve as the truth for us to evaluate the cluster analysis results.
+
+```{r, eval = FALSE}
+# Import the data set
+data.new <- as.matrix(read.table("data_new.txt",  header = FALSE));  
+str(data.new)
+
+## Read the true group labels of the data set.
+##
+## Notice the [[1]] at the end:
+## Even though the data set has only one column. read.table will still return a
+## data.frame by default. We want to convert it to a vector, the [[1]] operator
+## will return the first (and only column) of the input data.frame as a vector
+data.type <- read.table("data_type.txt",  header = FALSE)[[1]];
+
+# Transform the type into "1" and "2" (to compare with clustering result)
+data.type <- data.type + 1
+
+# K-means with 2 clusters
+fit.kmeans <- kmeans(data.new, centers = 2)
+
+# "str" and "summary" are powerful functions to check results
+str(fit.kmeans)
+cluster.kmeans <- fit.kmeans$cluster
+
+# Clustering result versus truth
+cbind(cluster.kmeans, data.type)
+
+# Number of correctly and incorrectly clustered objects
+sum(cluster.kmeans == data.type)
+sum(cluster.kmeans != data.type)
+
+table(cluster.kmeans, data.type)
+
+## It could happen that 1 and 2 might be swapped.
+
+```
+
+One thing you need to notice for the **kmeans** function is that the labeling from its output might be different from the true clustering labeling. Since there are only two groups in the population, you can switch the labeling from k-means clustering and choose the one that better agrees with the true labeling.
+
+## PAM
+
+In order to use PAM to conduct cluster analysis, we need to install package "cluster" first. Actually many clustering algorithms are included in this package. Let's take the same gene expression data as an example.
+
+```{r, eval = FALSE}
+# Install the package (only need to do it once)
+## install.packages("cluster")
+
+# Require package "cluster"
+library(cluster)
+
+# Clustering by PAM
+fit.pam <- pam(data.new, k = 2, metric = "euclidean")
+
+# Clustering result
+str(fit.pam)
+cluster.pam <- fit.pam$clustering
+
+# Number of correctly and incorrectly clustered objects
+sum(cluster.pam == data.type)
+sum(cluster.pam != data.type)
+
+# or use the table function to make a 2x2 contingency table
+table(cluster.pam, data.type)
+
+```
+
+According to this example, we can see that the function **pam** has similar input options as the function **kmean**. However, there is one difference. In the **pam** function there is an option called *metric*, which has two possible values, "euclidean" and "manhattan". This will specify the metric (distance) to be used for calculating dissimilarities between objects. Try the previous example with the manhattan distance.
+
+## Hierarchical clustering
+
+In the lecture we introduced two methods of hierachical clustering. During the lab we will introduce the function **hclust**, which will use agglomerative method to conduct the hierachical clustering. Take the same data again as an example.
+
+```{r, eval = FALSE}
+# Calculate the euclidean distance matrix of this data set
+dist.new <- dist(data.new, method = "euclidean")
+
+# Apply hierachical clustering to this distance matrix
+fit.hclust <- hclust(dist.new, method = "complete")
+
+# Based on the clustering result, find two clusters
+cluster.hclust <- cutree(fit.hclust, k = 2)
+
+# Number of correctly and incorrectly clustered objects
+table(cluster.hclust, data.type)
+
+```
+
+The structure for the function **hclust** is very different from **kmean** or **pam**. 
+
+* The first input of **hclust** is no longer the original data set, it should be a distance matrix based on the original data set. Thus, we need to calculate a distance matrix based on any metric we want before using **hclust** function.
+* The output of **hclust** will not give a clustering directly. Instead, it will give a hierachical clustering structure (also called  dendrogram, which will be covered in the next week). Thus, if the number of clusters is known, we need to use the **cutree** function to "cut" the dendrogram into that number of clusters.
+* As we learned from the lectures, there are several inter-cluster distance types. We cam modify that by the option *method* in **hclust** function. For further information, go to the help file to see the details.

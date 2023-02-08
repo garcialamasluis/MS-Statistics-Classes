@@ -1,0 +1,94 @@
+---
+title: "Genomics Homework 1"
+output:
+  pdf_document: default
+date: "2023-02-04"
+Name: "Luis Garcia-Lamas"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+First let's load in the data and look at the plot:
+
+```{r}
+#loading in cluster data to predict, and actual cluster label
+data.new <- as.matrix(read.table("data.txt",  header = FALSE));  #data we are interested in clustering
+data.type <- read.table("true_clustering.txt",  header = FALSE)[[1]]; #correct label for each data point
+plot(data.new) #plotting the data
+```
+
+Here, we can see that there seems to be an obvious amount of 5 clusters here. Also, looking at "true_clustering.txt" data, we can also see it varies from 1-5 for the labels. We can confidently assume here, that we want to find five clusters. now below, we will use K-means, PAM, and Hierarchical clustering. 
+\newpage
+
+# K-means Clustering:
+
+```{r}
+# K-means with 5 clusters using the data
+fit.kmeans <- kmeans(data.new, centers = 5)
+
+cluster.kmeans <- fit.kmeans$cluster #collecting cluster information
+
+table(cluster.kmeans, data.type) #comparing the cluster prediction, versus the actual label
+
+plot(data.new, col = fit.kmeans$cluster) #plotting same, data but colored with our prediction
+points(fit.kmeans$centers, col = 1 , pch = 8, cex = 2) #center points chosen based on the algorithm
+
+```
+
+
+# PAM Clustering:
+
+```{r}
+library(cluster)
+
+# Clustering by PAM with 5 clusters
+fit.pam <- pam(data.new, k = 5, metric = "euclidean")
+
+cluster.pam <- fit.pam$clustering #collecting cluster information
+
+table(cluster.pam, data.type) #comparing the cluster prediction, versus the actual label
+
+plot(data.new, col = fit.pam$cluster) #plotting same, data but colored with our prediction
+points(fit.pam$medoids, col = 1 , pch = 8, cex = 2) #center points chosen based on the algorithm
+```
+
+
+# Hierarchical Clustering:
+
+
+```{r}
+#Specifying distance function we will be using, which is euclidean, and collecting distances
+dist.new <- dist(data.new, method = "euclidean")
+
+# Apply hierachical clustering to this distance matrix 
+fit.hclust <- hclust(dist.new, method = "complete")
+
+# Based on the clustering result, find two clusters
+cluster.hclust <- cutree(fit.hclust, k = 5)
+
+# Number of correctly and incorrectly clustered objects
+table(cluster.hclust, data.type)
+
+plot(fit.hclust) #plotting fitted hierarchical cluster dendogram
+
+
+```
+
+# Error Rates for each respective algorithm:
+
+```{r}
+library(mclust)
+classError(fit.kmeans$cluster, data.type) #error rat2e for k means clustering
+classError(fit.pam$clustering, data.type) #error rate for pam clustering
+classError(cluster.hclust, data.type) #error rate for hierarchical clustering
+```
+
+# Summary
+
+Finally, after looking at our graphs and error rates for each algorithm we can see that they all perform fairly well, and classify correctly over 99% of the time. If we explicitly look at error rate, the lowest error rate would be hierarchical clustering.
+
+Looking at the plots too, K-means and PAM seem to classify correctly from an eye test point of view. The exact clusters we saw in the beginning, seemed to be correctly labeled in both clusters. The dendrogram that the hierarchical clustering produced also seems to have a clear 5 branches although that contain all the data points, although there are many small branches. In fact, K-means and PAM had near exact same results with some slight deviation in certain clusters. 
+
+Overall, all the results seem to be fairly close to eachother. Choosing one algorithm over another might depend on the context of the question. 
